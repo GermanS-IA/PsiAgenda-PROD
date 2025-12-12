@@ -1,36 +1,28 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <!-- Vercel/Production Fix: Ensure proper mobile rendering -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#7c3aed" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="PsiAgenda" />
-    
-    <link rel="manifest" href="/manifest.json" />
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PsiAgenda | Gestión Inteligente</title>
-    
-    <!-- FIX CRÍTICO: Eliminamos los scripts y polyfills que causaban conflicto con Vercel. -->
-
+    <!-- We keep Tailwind CDN for simplicity in this specific setup to avoid complex CSS config -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
+      :root {
+        color-scheme: dark;
       }
+      
       body {
         font-family: 'Plus Jakarta Sans', sans-serif;
-        background-color: #f1f5f9; /* slate-100 */
+        background-color: #0f172a;
+        color: #e2e8f0;
       }
-      #root {
-        height: 100%;
-      }
-      /* Custom scrollbar for better aesthetics */
+
       ::-webkit-scrollbar {
         width: 6px;
       }
@@ -38,15 +30,17 @@
         background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #cbd5e1; /* slate-300 */
+        background: #475569; 
         border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8; /* slate-400 */
+        background: #64748b; 
       }
 
-      /* CRITICAL FIX: Expand the native calendar picker indicator to cover the ENTIRE input area. */
-      input[type="date"].custom-date-trigger::-webkit-calendar-picker-indicator {
+      input[type="date"] {
+        position: relative;
+      }
+      input[type="date"]::-webkit-calendar-picker-indicator {
         position: absolute;
         top: 0;
         left: 0;
@@ -59,10 +53,22 @@
         cursor: pointer;
       }
     </style>
-  </head>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "vite": "https://esm.sh/vite@^7.2.7",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+</head>
   <body>
     <div id="root"></div>
-    <!-- Vercel/Vite Standard Entry Point -->
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- This script tag is essential for Vite to load your React code -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
