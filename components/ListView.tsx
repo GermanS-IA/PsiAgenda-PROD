@@ -1,0 +1,191 @@
+import React, { useState } from 'react';
+import { Appointment } from '../types';
+
+interface ListViewProps {
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+  filteredAppointments: Appointment[];
+  onEdit: (appt: Appointment) => void;
+  onDelete: (id: string, deleteSeries: boolean, parentId?: string) => void;
+}
+
+const ListView: React.FC<ListViewProps> = ({ selectedDate, onDateChange, filteredAppointments, onEdit, onDelete }) => {
+  const [deleteModalAppt, setDeleteModalAppt] = useState<Appointment | null>(null);
+
+  const formatDateTitle = (dateStr: string) => {
+    // Manually parse YYYY-MM-DD to avoid timezone shifts
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    // Explicitly request full Spanish format
+    return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const handleTrashClick = (appt: Appointment) => {
+      setDeleteModalAppt(appt);
+  };
+
+  const confirmDelete = (deleteSeries: boolean) => {
+      if (deleteModalAppt) {
+          onDelete(deleteModalAppt.ID_TURNO, deleteSeries, deleteModalAppt.PARENT_ID);
+          setDeleteModalAppt(null);
+      }
+  };
+
+  return (
+    <>
+    <div className="space-y-4 sm:space-y-6 pb-24 relative">
+      {/* Date Header */}
+      <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
+        <div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-white capitalize leading-tight">
+            {formatDateTitle(selectedDate)}
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-0.5">
+                {filteredAppointments.length} {filteredAppointments.length === 1 ? 'paciente' : 'pacientes'} agendados
+            </p>
+        </div>
+        
+        {/* Native Date Picker - Reliable & Functional */}
+        <div>
+            <input 
+                type="date" 
+                value={selectedDate} 
+                onChange={(e) => onDateChange(e.target.value)}
+                className="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-200 font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+            />
+        </div>
+      </div>
+
+      {filteredAppointments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-dashed">
+          <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-slate-400 dark:text-slate-500">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+            </svg>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">No tienes pacientes para este día.</p>
+          <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Disfruta de tu tiempo libre.</p>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:gap-4">
+        {filteredAppointments.map((appt) => (
+          <div key={appt.ID_TURNO} className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all duration-200 overflow-hidden">
+            <div className="flex flex-row items-stretch">
+                {/* Time Column - Compact Side Bar */}
+                <div className="bg-indigo-50/50 dark:bg-slate-700/50 w-16 sm:w-24 flex flex-col items-center justify-center p-2 border-r border-slate-100 dark:border-slate-700 shrink-0">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold text-base sm:text-lg leading-none">{appt.HORA_INICIO}</span>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 p-3 sm:p-4 min-w-0">
+                    <div className="flex justify-between items-start">
+                        <div className="min-w-0 pr-2">
+                            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap leading-snug">
+                                <span className="truncate">{appt.PACIENTE}</span>
+                                {appt.RECURRENCIA && (
+                                    <span className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold whitespace-nowrap">
+                                        {appt.FRECUENCIA === 'quincenal' ? '15D' : 'SEM'}
+                                    </span>
+                                )}
+                            </h3>
+                            
+                            <div className="mt-1.5 space-y-1">
+                                {appt.TELEFONO && (
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-slate-400 shrink-0">
+                                            <path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" />
+                                        </svg>
+                                        <span className="truncate">{appt.TELEFONO}</span>
+                                    </div>
+                                )}
+                                {appt.EMAIL && (
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-slate-400 shrink-0">
+                                            <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z" />
+                                            <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
+                                        </svg>
+                                        <span className="truncate">{appt.EMAIL}</span>
+                                    </div>
+                                )}
+                                {appt.NOTAS && (
+                                    <div className="mt-2 bg-yellow-50 dark:bg-yellow-900/20 p-1.5 sm:p-2 rounded border border-yellow-100 dark:border-yellow-900/30 text-xs sm:text-sm text-slate-600 dark:text-slate-300 flex gap-1.5 items-start">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-yellow-500 dark:text-yellow-400 mt-0.5 shrink-0">
+                                            <path fillRule="evenodd" d="M4.125 3C3.089 3 2.25 3.84 2.25 4.875V18a3 3 0 003 3h15a3 3 0 01-3-3V4.875C17.25 3.84 16.411 3 15.375 3H4.125zM12 9.75a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5H12zm-.75-2.25a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5H12a.75.75 0 01-.75-.75zM6 12.75a.75.75 0 000 1.5h7.5a.75.75 0 000-1.5H6zm-.75 3.75a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5H6a.75.75 0 01-.75-.75zM6 6.75a.75.75 0 000 1.5h3a.75.75 0 000-1.5H6z" clipRule="evenodd" />
+                                        </svg>
+                                        <p className="italic line-clamp-2">{appt.NOTAS}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-0.5 sm:gap-1 ml-1 shrink-0">
+                             <button onClick={() => onEdit(appt)} className="p-1.5 sm:p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                             </button>
+                             <button onClick={() => handleTrashClick(appt)} className="p-1.5 sm:p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+        ))}
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteModalAppt && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700">
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">¿Eliminar turno?</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+                        Estás a punto de borrar el turno de <span className="font-semibold text-slate-700 dark:text-slate-300">{deleteModalAppt.PACIENTE}</span>.
+                        {deleteModalAppt.RECURRENCIA && <br/>Este turno es parte de una serie recurrente.}
+                    </p>
+                    
+                    <div className="w-full flex flex-col gap-2">
+                        <button 
+                            onClick={() => confirmDelete(false)}
+                            className="w-full py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                        >
+                            Borrar solo este turno
+                        </button>
+                        
+                        {deleteModalAppt.RECURRENCIA && (
+                            <button 
+                                onClick={() => confirmDelete(true)}
+                                className="w-full py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow-md hover:shadow-lg transition-all"
+                            >
+                                Borrar todos los turnos del paciente
+                            </button>
+                        )}
+                        
+                        <button 
+                            onClick={() => setDeleteModalAppt(null)}
+                            className="mt-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 underline"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+    </div>
+    </>
+  );
+};
+export default ListView;
