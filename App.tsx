@@ -121,7 +121,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-slate-200">
-      <GeminiQuery appointments={appointments} />
+   
       
       {/* Hidden File Input for Restore */}
       <input 
