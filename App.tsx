@@ -20,8 +20,11 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
 
-  // 🔹 NUEVO: modo de edición
+  // ✅ Edición: single / series
   const [editMode, setEditMode] = useState<'single' | 'series'>('single');
+
+  // ✅ Manual (PDF) NO se abre solo
+  const [isManualOpen, setIsManualOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +59,7 @@ const App: React.FC = () => {
   const handleSaveAppointment = (appt: Appointment) => {
     if (editingAppt) {
       if (editMode === 'series' && editingAppt.PARENT_ID) {
-        // 🔹 Editar este y todos los siguientes
+        // Editar este y todos los siguientes
         scheduleService.updateRecurringSeries(
           editingAppt.PARENT_ID,
           editingAppt.FECHA_INICIO,
@@ -70,7 +73,7 @@ const App: React.FC = () => {
           }
         );
       } else {
-        // 🔹 Editar solo este
+        // Editar solo este turno
         scheduleService.updateAppointment({ ...editingAppt, ...appt });
       }
     } else {
@@ -142,9 +145,7 @@ const App: React.FC = () => {
             <button
               onClick={() => setViewMode('calendar')}
               className={`px-3 py-1 rounded text-sm ${
-                viewMode === 'calendar'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700 text-slate-300'
+                viewMode === 'calendar' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'
               }`}
             >
               Calendario
@@ -153,9 +154,7 @@ const App: React.FC = () => {
             <button
               onClick={() => setViewMode('list')}
               className={`px-3 py-1 rounded text-sm ${
-                viewMode === 'list'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700 text-slate-300'
+                viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'
               }`}
             >
               Lista
@@ -174,11 +173,7 @@ const App: React.FC = () => {
       {/* MAIN */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-4">
         {viewMode === 'calendar' ? (
-          <CalendarView
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            appointments={appointments}
-          />
+          <CalendarView selectedDate={selectedDate} onDateSelect={setSelectedDate} appointments={appointments} />
         ) : (
           <ListView
             selectedDate={selectedDate}
@@ -192,31 +187,25 @@ const App: React.FC = () => {
 
       {/* FOOTER / BACKUP */}
       <footer className="border-t border-slate-700 p-4 flex justify-center gap-3 text-sm">
-        <button
-          onClick={handleExportJSON}
-          className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600"
-        >
+        <button onClick={handleExportJSON} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">
           Backup JSON
         </button>
 
-        <button
-          onClick={handleExportCSV}
-          className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600"
-        >
+        <button onClick={handleExportCSV} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">
           Exportar Excel
         </button>
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600"
-        >
+        <button onClick={() => fileInputRef.current?.click()} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">
           Restaurar
         </button>
 
-        <UserManual />
+        {/* ✅ Manual ahora es un botón, no se abre solo */}
+        <button onClick={() => setIsManualOpen(true)} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">
+          Manual
+        </button>
       </footer>
 
-      {/* MODAL */}
+      {/* MODAL TURNO */}
       {isModalOpen && (
         <AppointmentModal
           appointment={editingAppt}
@@ -224,6 +213,9 @@ const App: React.FC = () => {
           onSave={handleSaveAppointment}
         />
       )}
+
+      {/* ✅ MODAL MANUAL (PDF) */}
+      {isManualOpen && <UserManual onClose={() => setIsManualOpen(false)} />}
     </div>
   );
 };
