@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ViewMode, Appointment } from './types';
 import * as scheduleService from './services/scheduleService';
 import AppointmentModal from './components/AppointmentModal';
-import GeminiQuery from './components/GeminiQuery';
 import CalendarView from './components/CalendarView';
 import ListView from './components/ListView';
 import UserManual from './components/UserManual';
+
 
 const getTodayStr = () => {
     const date = new Date();
