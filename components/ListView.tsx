@@ -153,7 +153,12 @@ const ListView: React.FC<ListViewProps> = ({ selectedDate, onDateChange, filtere
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">¿Eliminar turno?</h3>
                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
                         Estás a punto de borrar el turno de <span className="font-semibold text-slate-700 dark:text-slate-300">{deleteModalAppt.PACIENTE}</span>.
-                        {deleteModalAppt.RECURRENCIA && <br/>Este turno es parte de una serie recurrente.}
+                        {deleteModalAppt.RECURRENCIA && (
+                          <>
+                          <br />
+                        Este turno es parte de una serie recurrente.
+                          </>
+                        )}
                     </p>
                     
                     <div className="w-full flex flex-col gap-2">
