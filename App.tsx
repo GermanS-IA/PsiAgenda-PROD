@@ -25,6 +25,8 @@ const App: React.FC = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
+  const [editMode, setEditMode] = useState<'single' | 'series'>('single');
+
   
   // Backup State
   const [backupNeeded, setBackupNeeded] = useState(false);
@@ -58,15 +60,30 @@ const App: React.FC = () => {
         .sort((a, b) => a.HORA_INICIO.localeCompare(b.HORA_INICIO));
     setFilteredAppointments(filtered);
   };
-
-  const handleSaveAppointment = (appt: Appointment) => {
-    if (editingAppt) {
-      scheduleService.updateAppointment({ ...editingAppt, ...appt });
+const handleSaveAppointment = (appt: Appointment) => {
+  if (editingAppt) {
+    if (editMode === 'series' && editingAppt.PARENT_ID) {
+      scheduleService.updateRecurringSeries(
+        editingAppt.PARENT_ID,
+        {
+          PACIENTE: appt.PACIENTE,
+          TELEFONO: appt.TELEFONO,
+          EMAIL: appt.EMAIL,
+          HORA_INICIO: appt.HORA_INICIO,
+          NOTAS: appt.NOTAS,
+        }
+      );
     } else {
-      scheduleService.saveAppointment(appt);
+      scheduleService.updateAppointment({ ...editingAppt, ...appt });
     }
-    loadData();
-  };
+  } else {
+    scheduleService.saveAppointment(appt);
+  }
+
+  setEditMode('single');
+  loadData();
+};
+
 
   const handleDelete = (id: string, deleteSeries: boolean, parentId?: string) => {
     if (deleteSeries && parentId) {
@@ -77,10 +94,12 @@ const App: React.FC = () => {
     loadData();
   };
 
-  const handleEdit = (appt: Appointment) => {
-    setEditingAppt(appt);
-    setIsModalOpen(true);
-  };
+const handleEdit = (appt: Appointment, mode: 'single' | 'series') => {
+  setEditingAppt(appt);
+  setEditMode(mode);
+  setIsModalOpen(true);
+};
+
 
   const openNewModal = () => {
     setEditingAppt(null);
