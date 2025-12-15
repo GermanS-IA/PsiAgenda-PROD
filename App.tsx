@@ -3,10 +3,10 @@ import { ViewMode, Appointment } from './types';
 import * as scheduleService from './services/scheduleService';
 
 import AppointmentModal from './components/AppointmentModal';
-import GeminiQuery from './components/GeminiQuery';
 import CalendarView from './components/CalendarView';
 import ListView from './components/ListView';
 import UserManual from './components/UserManual';
+import GeminiQuery from './components/GeminiQuery';
 
 const getTodayStr = () => {
   const date = new Date();
@@ -17,35 +17,32 @@ const getTodayStr = () => {
 };
 
 const App: React.FC = () => {
+  // ✅ Default: Agenda Diaria (LIST) — NO calendario
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.LIST);
-  const [selectedDate, setSelectedDate] = useState(getTodayStr());
 
+  const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
 
-  // ✅ Modo edición: single / series (para "este y todos los siguientes")
+  // ✅ Edit: single / series
   const [editMode, setEditMode] = useState<'single' | 'series'>('single');
 
-  // ✅ Manual NO se abre solo
+  // ✅ Manual no abre solo
   const [showManual, setShowManual] = useState(false);
 
-  // ✅ Banner backup
+  // ✅ Backup banner
   const [backupNeeded, setBackupNeeded] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ======================
-  // DATA
-  // ======================
   const loadData = () => {
     const data = scheduleService.getAppointments();
     setAppointments(data);
   };
 
-  const checkBackupStatus = () => {
+  const refreshBackupFlag = () => {
     try {
       setBackupNeeded(scheduleService.isBackupNeeded());
     } catch {
@@ -53,34 +50,20 @@ const App: React.FC = () => {
     }
   };
 
-  const filterByDate = (date: string, allAppointments: Appointment[]) => {
-    const filtered = allAppointments.filter(a => a.FECHA_INICIO === date);
-    filtered.sort((a, b) => a.HORA_INICIO.localeCompare(b.HORA_INICIO));
-    setFilteredAppointments(filtered);
-  };
-
   useEffect(() => {
-    // Usa tu generador de data inicial (si aplica) y luego carga
+    // Mantiene tu lógica: si ya estaba inicializado, no regenera
     try {
       const init = scheduleService.generateTestData();
       setAppointments(init);
-      filterByDate(selectedDate, init);
     } catch {
       loadData();
     }
-    checkBackupStatus();
+    refreshBackupFlag();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    filterByDate(selectedDate, appointments);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appointments, selectedDate]);
-
-  // ======================
-  // ACTIONS
-  // ======================
-  const handleNewAppointment = () => {
+  // ========= Actions =========
+  const handleNew = () => {
     setEditingAppt(null);
     setEditMode('single');
     setIsModalOpen(true);
@@ -119,7 +102,7 @@ const App: React.FC = () => {
     setIsModalOpen(false);
     setEditMode('single');
     loadData();
-    checkBackupStatus();
+    refreshBackupFlag();
   };
 
   const handleDelete = (id: string, deleteSeries: boolean, parentId?: string) => {
@@ -129,17 +112,17 @@ const App: React.FC = () => {
       scheduleService.deleteAppointment(id);
     }
     loadData();
-    checkBackupStatus();
+    refreshBackupFlag();
   };
 
-  const handleBackupJSON = () => {
+  const handleBackup = () => {
     scheduleService.exportToJSON();
-    checkBackupStatus();
+    refreshBackupFlag();
   };
 
   const handleExportExcel = () => {
     scheduleService.exportToCSV();
-    checkBackupStatus();
+    refreshBackupFlag();
   };
 
   const handleRestoreClick = () => {
@@ -150,36 +133,36 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const confirmed = window.confirm(
-      'ATENCIÓN: Al importar un respaldo, se reemplazarán tus datos actuales por los del archivo. ¿Deseas continuar?'
+    const ok = window.confirm(
+      'ATENCIÓN: Al restaurar un respaldo, se reemplazarán tus datos actuales por los del archivo. ¿Deseás continuar?'
     );
 
-    if (confirmed) {
+    if (ok) {
       try {
         await scheduleService.importFromJSON(file);
-        alert('Respaldo restaurado con éxito.');
         loadData();
-        checkBackupStatus();
+        refreshBackupFlag();
+        alert('Respaldo restaurado con éxito.');
       } catch {
-        alert('Error al leer el archivo. Asegúrate de que sea un JSON válido generado por esta app.');
+        alert('Error al restaurar. Asegurate de usar un JSON exportado por PsiAgenda.');
       }
     }
 
     e.target.value = '';
   };
 
-  // ======================
-  // UI
-  // ======================
+  // ========= Derived =========
+  const filteredAppointments = scheduleService.getAppointmentsByDate(selectedDate);
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200">
       {/* IA arriba */}
       <GeminiQuery appointments={appointments} />
 
-      {/* Input oculto para restaurar */}
+      {/* input restore oculto */}
       <input
-        ref={fileInputRef}
         type="file"
+        ref={fileInputRef}
         accept=".json,application/json"
         className="hidden"
         onChange={handleFileSelected}
@@ -199,7 +182,7 @@ const App: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={handleBackupJSON}
+              onClick={handleBackup}
               className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold"
             >
               Respaldar Ahora
@@ -207,11 +190,9 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Encabezado + acciones */}
+        {/* Header acciones */}
         <div className="mt-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight">Mi Agenda</h1>
-          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight">Mi Agenda</h1>
 
           <div className="flex items-center gap-2">
             <button
@@ -227,7 +208,7 @@ const App: React.FC = () => {
               Excel
             </button>
             <button
-              onClick={handleBackupJSON}
+              onClick={handleBackup}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-900 text-sm font-extrabold"
             >
               Respaldar
@@ -235,7 +216,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Tabs Agenda diaria / Calendario mensual */}
+        {/* Tabs */}
         <div className="mt-4 bg-slate-800/60 border border-slate-700 rounded-2xl p-2 flex gap-2">
           <button
             onClick={() => setViewMode(ViewMode.LIST)}
@@ -283,7 +264,7 @@ const App: React.FC = () => {
 
       {/* Botón flotante + */}
       <button
-        onClick={handleNewAppointment}
+        onClick={handleNew}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 shadow-xl flex items-center justify-center text-white text-3xl font-black"
         title="Nuevo turno"
       >
@@ -295,7 +276,7 @@ const App: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex gap-2">
             <button
-              onClick={handleBackupJSON}
+              onClick={handleBackup}
               className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold"
             >
               Backup JSON
@@ -323,17 +304,16 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal turno */}
-      {isModalOpen && (
-        <AppointmentModal
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleSaveAppointment}
-          initialDate={selectedDate}
-          editingAppointment={editingAppt}
-        />
-      )}
+      {/* Modal turno (usa tu componente real: isOpen) */}
+      <AppointmentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveAppointment}
+        initialDate={selectedDate}
+        editingAppointment={editingAppt}
+      />
 
-      {/* Manual */}
+      {/* Manual modal */}
       {showManual && <UserManual onClose={() => setShowManual(false)} />}
     </div>
   );
