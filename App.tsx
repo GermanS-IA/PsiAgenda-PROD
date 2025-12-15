@@ -5,6 +5,8 @@ import AppointmentModal from './components/AppointmentModal';
 import CalendarView from './components/CalendarView';
 import ListView from './components/ListView';
 import UserManual from './components/UserManual';
+import GeminiQuery from './components/GeminiQuery';
+
 
 
 const getTodayStr = () => {
@@ -120,7 +122,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-slate-200">
+  <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-slate-200">
+      <GeminiQuery appointments={appointments} />
    
       
       {/* Hidden File Input for Restore */}
