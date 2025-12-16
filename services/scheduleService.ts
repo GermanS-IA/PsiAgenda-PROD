@@ -79,19 +79,28 @@ export const updateRecurringSeries = (
   fromTime: string,
   patch: Partial<Appointment>
 ): Appointment[] => {
+
+  const toDate = (d: string) => {
+    const [day, month, year] = d.split('/').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const fromDateObj = toDate(fromDate);
+
   const currentAppointments = getAppointments();
 
   const updated = currentAppointments.map((a) => {
-    // 👉 incluir el turno base y todos los hijos
+
     const isSameSeries =
       a.ID_TURNO === parentId || a.PARENT_ID === parentId;
 
     if (!isSameSeries) return a;
 
-    // 👉 editar este y los siguientes
-    const isAfterDate = a.FECHA_INICIO > fromDate;
+    const apptDate = toDate(a.FECHA_INICIO);
+
+    const isAfterDate = apptDate > fromDateObj;
     const isSameDateAndAfterTime =
-      a.FECHA_INICIO === fromDate &&
+      apptDate.getTime() === fromDateObj.getTime() &&
       a.HORA_INICIO >= fromTime;
 
     if (isAfterDate || isSameDateAndAfterTime) {
@@ -107,6 +116,7 @@ export const updateRecurringSeries = (
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   return updated;
 };
+
 
 
 export const deleteAppointment = (id: string): Appointment[] => {
