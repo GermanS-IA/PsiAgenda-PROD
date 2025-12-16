@@ -5,7 +5,7 @@ interface ListViewProps {
   selectedDate: string;
   onDateChange: (date: string) => void;
   filteredAppointments: Appointment[];
-  onEdit: (appt: Appointment, mode?: 'single' | 'series') => void; // mode opcional para no romper nada
+  onEdit: (appt: Appointment, mode?: 'single' | 'series') => void; // <- importante
   onDelete: (id: string, deleteSeries: boolean, parentId?: string) => void;
 }
 
@@ -17,14 +17,13 @@ const ListView: React.FC<ListViewProps> = ({
   onDelete,
 }) => {
   const [deleteModalAppt, setDeleteModalAppt] = useState<Appointment | null>(null);
+
+  // ✅ NUEVO: modal para Editar (solo este / serie)
   const [editModalAppt, setEditModalAppt] = useState<Appointment | null>(null);
 
   const formatDateTitle = (dateStr: string) => {
-    // Manually parse YYYY-MM-DD to avoid timezone shifts
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day);
-
-    // Explicitly request full Spanish format
     return date.toLocaleDateString('es-ES', {
       weekday: 'long',
       day: 'numeric',
@@ -44,21 +43,27 @@ const ListView: React.FC<ListViewProps> = ({
     }
   };
 
+  // ✅ CLAVE: esto es lo que hoy no te está pasando.
+  // En vez de editar directo, si es recurrente preguntamos.
   const handleEditClick = (appt: Appointment) => {
-    // Si es recurrente y tiene PARENT_ID => preguntamos
-    if (appt.RECURRENCIA && appt.PARENT_ID) {
+    if (appt.RECURRENCIA) {
       setEditModalAppt(appt);
       return;
     }
-    // Si no es recurrente (o no tiene parent) => edita solo este
     onEdit(appt, 'single');
   };
 
   const confirmEdit = (mode: 'single' | 'series') => {
-    if (editModalAppt) {
+    if (!editModalAppt) return;
+
+    // Si eligió "serie" pero no hay PARENT_ID, caemos a single (para no romper)
+    if (mode === 'series' && !editModalAppt.PARENT_ID) {
+      onEdit(editModalAppt, 'single');
+    } else {
       onEdit(editModalAppt, mode);
-      setEditModalAppt(null);
     }
+
+    setEditModalAppt(null);
   };
 
   return (
@@ -87,9 +92,24 @@ const ListView: React.FC<ListViewProps> = ({
           </div>
         </div>
 
-        {/* Lista o vacío */}
         {filteredAppointments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-dashed">
+            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-8 h-8 text-slate-400 dark:text-slate-500"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+                />
+              </svg>
+            </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
               No tienes pacientes para este día.
             </p>
@@ -102,17 +122,17 @@ const ListView: React.FC<ListViewProps> = ({
             {filteredAppointments.map((appt) => (
               <div
                 key={appt.ID_TURNO}
-                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all duration-200 overflow-hidden"
+                className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all duration-200 overflow-hidden"
               >
                 <div className="flex flex-row items-stretch">
-                  {/* Hora */}
+                  {/* Time Column */}
                   <div className="bg-indigo-50/50 dark:bg-slate-700/50 w-16 sm:w-24 flex flex-col items-center justify-center p-2 border-r border-slate-100 dark:border-slate-700 shrink-0">
                     <span className="text-indigo-600 dark:text-indigo-400 font-bold text-base sm:text-lg leading-none">
                       {appt.HORA_INICIO}
                     </span>
                   </div>
 
-                  {/* Contenido */}
+                  {/* Content */}
                   <div className="flex-1 p-3 sm:p-4 min-w-0">
                     <div className="flex justify-between items-start">
                       <div className="min-w-0 pr-2">
@@ -127,24 +147,24 @@ const ListView: React.FC<ListViewProps> = ({
 
                         <div className="mt-1.5 space-y-1">
                           {appt.TELEFONO && (
-                            <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
-                              Tel: {appt.TELEFONO}
+                            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
+                              <span className="truncate">Tel: {appt.TELEFONO}</span>
                             </div>
                           )}
                           {appt.EMAIL && (
-                            <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
-                              Email: {appt.EMAIL}
+                            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
+                              <span className="truncate">Email: {appt.EMAIL}</span>
                             </div>
                           )}
                           {appt.NOTAS && (
-                            <div className="mt-2 bg-yellow-50 dark:bg-yellow-900/20 p-1.5 sm:p-2 rounded border border-yellow-100 dark:border-yellow-900/30 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                            <div className="mt-2 bg-yellow-50 dark:bg-yellow-900/20 p-1.5 sm:p-2 rounded border border-yellow-100 dark:border-yellow-900/30 text-xs sm:text-sm text-slate-600 dark:text-slate-300 flex gap-1.5 items-start">
                               <p className="italic line-clamp-2">{appt.NOTAS}</p>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Acciones */}
+                      {/* Actions */}
                       <div className="flex gap-0.5 sm:gap-1 ml-1 shrink-0">
                         <button
                           onClick={() => handleEditClick(appt)}
@@ -196,40 +216,19 @@ const ListView: React.FC<ListViewProps> = ({
           </div>
         )}
 
-        {/* EDIT CONFIRMATION MODAL */}
+        {/* ✅ EDIT CONFIRMATION MODAL */}
         {editModalAppt && (
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
-            onClick={() => setEditModalAppt(null)}
-          >
-            <div
-              className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700">
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="w-6 h-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
-                    />
-                  </svg>
+                  ✏️
                 </div>
-
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
                   ¿Editar turno?
                 </h3>
-
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                  Estás por editar un turno recurrente. ¿Querés editar solo este turno o este y todos los siguientes?
+                  Este turno es recurrente. ¿Querés editar solo este turno o este y todos los siguientes?
                 </p>
 
                 <div className="w-full flex flex-col gap-2">
@@ -261,12 +260,58 @@ const ListView: React.FC<ListViewProps> = ({
 
         {/* DELETE CONFIRMATION MODAL */}
         {deleteModalAppt && (
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
-            onClick={() => setDeleteModalAppt(null)}
-          >
-            <div
-              className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700">
               <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
+                  🗑️
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">¿Eliminar turno?</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+                  Estás a punto de borrar el turno de{' '}
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {deleteModalAppt.PACIENTE}
+                  </span>
+                  .
+                  {deleteModalAppt.RECURRENCIA && (
+                    <>
+                      <br />
+                      Este turno es parte de una serie recurrente.
+                    </>
+                  )}
+                </p>
+
+                <div className="w-full flex flex-col gap-2">
+                  <button
+                    onClick={() => confirmDelete(false)}
+                    className="w-full py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                  >
+                    Borrar solo este turno
+                  </button>
+
+                  {deleteModalAppt.RECURRENCIA && (
+                    <button
+                      onClick={() => confirmDelete(true)}
+                      className="w-full py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow-md hover:shadow-lg transition-all"
+                    >
+                      Borrar todos los turnos del paciente
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setDeleteModalAppt(null)}
+                    className="mt-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 underline"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+export default ListView;
