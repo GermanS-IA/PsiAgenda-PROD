@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ViewMode, Appointment } from './types';
 import * as scheduleService from './services/scheduleService';
+
 import AppointmentModal from './components/AppointmentModal';
 import GeminiQuery from './components/GeminiQuery';
 import CalendarView from './components/CalendarView';
@@ -18,13 +19,14 @@ const getTodayStr = () => {
 const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.LIST);
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
 
-  // ✅ NUEVO: si se edita single o serie
+  // ✅ clave: modo de edición (solo este / este + siguientes)
   const [editMode, setEditMode] = useState<'single' | 'series'>('single');
 
   // Backup State
@@ -35,6 +37,7 @@ const App: React.FC = () => {
   const [showManual, setShowManual] = useState(false);
 
   useEffect(() => {
+    // Seed inicial (lo que ya tenías)
     const data = scheduleService.generateTestData();
     setAppointments(data);
     checkBackupStatus();
@@ -42,6 +45,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     filterByDate(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointments, selectedDate]);
 
   const loadData = () => {
@@ -60,14 +64,10 @@ const App: React.FC = () => {
     setFilteredAppointments(filtered);
   };
 
-  // ✅ EDITA single o serie según editMode
   const handleSaveAppointment = (appt: Appointment) => {
     if (editingAppt) {
-      if (
-        editMode === 'series' &&
-        editingAppt.RECURRENCIA &&
-        editingAppt.PARENT_ID
-      ) {
+      // ✅ si eligió “serie” y el turno tiene PARENT_ID -> edita este y siguientes
+      if (editMode === 'series' && editingAppt.PARENT_ID) {
         scheduleService.updateRecurringSeries(
           editingAppt.PARENT_ID,
           editingAppt.FECHA_INICIO,
@@ -81,12 +81,14 @@ const App: React.FC = () => {
           }
         );
       } else {
+        // ✅ “solo este”
         scheduleService.updateAppointment({ ...editingAppt, ...appt });
       }
     } else {
       scheduleService.saveAppointment(appt);
     }
 
+    // reset + recarga
     setEditMode('single');
     setEditingAppt(null);
     loadData();
@@ -103,10 +105,10 @@ const App: React.FC = () => {
     checkBackupStatus();
   };
 
-  // ✅ ahora recibe mode desde ListView
+  // ✅ AHORA recibe modo desde ListView: 'single' | 'series'
   const handleEdit = (appt: Appointment, mode: 'single' | 'series' = 'single') => {
-    setEditingAppt(appt);
     setEditMode(mode);
+    setEditingAppt(appt);
     setIsModalOpen(true);
   };
 
@@ -133,28 +135,22 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const confirmed = window.confirm(
-      'ATENCIÓN: Al importar un respaldo, se reemplazarán todos los datos actuales por los del archivo. ¿Deseas continuar?'
-    );
-
-    if (confirmed) {
-      try {
-        await scheduleService.importFromJSON(file);
-        alert('Respaldo restaurado con éxito.');
-        loadData();
-        setBackupNeeded(false);
-      } catch (error) {
-        alert('Error al leer el archivo. Asegúrate de que sea un JSON válido generado por esta app.');
-      }
+    try {
+      await scheduleService.importFromJSON(file);
+      loadData();
+      checkBackupStatus();
+    } catch (err) {
+      alert('Error al restaurar el backup. Asegurate de seleccionar un .json válido.');
+    } finally {
+      e.target.value = '';
     }
-
-    e.target.value = '';
   };
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-slate-200">
       <GeminiQuery appointments={appointments} />
 
+      {/* Hidden File Input for Restore */}
       <input
         type="file"
         ref={fileInputRef}
@@ -164,6 +160,7 @@ const App: React.FC = () => {
       />
 
       <main className="flex-1 p-4 max-w-3xl mx-auto w-full">
+        {/* Backup Warning Banner */}
         {backupNeeded && (
           <div className="bg-amber-900/40 border border-amber-600/50 p-4 rounded-xl mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="flex items-center gap-3">
@@ -186,6 +183,7 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {/* Top Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-slate-200">Mi Agenda</h1>
@@ -195,30 +193,30 @@ const App: React.FC = () => {
               title="Ver Manual de Usuario"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 9.75h1.5m-1.5 3h1.5m-6 6.75h9A2.25 2.25 0 0018 17.25V6.75A2.25 2.25 0 0015.75 4.5h-9A2.25 2.25 0 004.5 6.75v10.5A2.25 2.25 0 006.75 19.5z" />
               </svg>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleImportClick}
-              className="flex items-center gap-2 text-sm text-slate-400 hover:text-indigo-400 transition-colors bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-slate-700"
-              title="Cargar un archivo de respaldo"
+              className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-slate-700"
+              title="Restaurar desde backup JSON"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <path d="M12 6a6 6 0 00-6 6H4l3 3 3-3H8a4 4 0 114 4 1 1 0 110 2 6 6 0 000-12z" />
               </svg>
               <span className="hidden sm:inline">Restaurar</span>
             </button>
 
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-2 text-sm text-slate-400 hover:text-green-400 transition-colors bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-slate-700"
-              title="Exportar a Excel"
+              className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-slate-700"
+              title="Exportar a Excel (CSV)"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <path d="M6.75 2.25A2.25 2.25 0 004.5 4.5v15A2.25 2.25 0 006.75 21h10.5A2.25 2.25 0 0019.5 18.75V8.25L13.5 2.25H6.75zM13.5 3.75V9h5.25" />
               </svg>
               <span className="hidden sm:inline">Excel</span>
             </button>
@@ -248,6 +246,13 @@ const App: React.FC = () => {
                 : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'
             }`}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                clipRule="evenodd"
+              />
+            </svg>
             Agenda Diaria
           </button>
 
@@ -259,10 +264,18 @@ const App: React.FC = () => {
                 : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'
             }`}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                clipRule="evenodd"
+              />
+            </svg>
             Calendario Mensual
           </button>
         </div>
 
+        {/* Views */}
         {viewMode === ViewMode.LIST ? (
           <ListView
             selectedDate={selectedDate}
@@ -281,6 +294,7 @@ const App: React.FC = () => {
         )}
       </main>
 
+      {/* Floating Action Button */}
       <button
         onClick={openNewModal}
         className="fixed bottom-6 right-6 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl p-4 shadow-xl transition-all hover:scale-105 active:scale-95 focus:ring-4 focus:ring-indigo-900 z-40 flex items-center gap-2 group"
@@ -293,7 +307,11 @@ const App: React.FC = () => {
 
       <AppointmentModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditMode('single');
+          setEditingAppt(null);
+        }}
         onSave={handleSaveAppointment}
         initialDate={selectedDate}
         editingAppointment={editingAppt}
