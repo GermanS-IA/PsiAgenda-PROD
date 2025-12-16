@@ -45,11 +45,13 @@ const ListView: React.FC<ListViewProps> = ({
   };
 
   const handleEditClick = (appt: Appointment) => {
+    // Si es recurrente y tiene PARENT_ID => preguntamos
     if (appt.RECURRENCIA && appt.PARENT_ID) {
       setEditModalAppt(appt);
-    } else {
-      onEdit(appt, 'single');
+      return;
     }
+    // Si no es recurrente (o no tiene parent) => edita solo este
+    onEdit(appt, 'single');
   };
 
   const confirmEdit = (mode: 'single' | 'series') => {
@@ -196,8 +198,14 @@ const ListView: React.FC<ListViewProps> = ({
 
         {/* EDIT CONFIRMATION MODAL */}
         {editModalAppt && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
+            onClick={() => setEditModalAppt(null)}
+          >
+            <div
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
                   <svg
@@ -253,58 +261,12 @@ const ListView: React.FC<ListViewProps> = ({
 
         {/* DELETE CONFIRMATION MODAL */}
         {deleteModalAppt && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
+            onClick={() => setDeleteModalAppt(null)}
+          >
+            <div
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex flex-col items-center text-center">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
-                  ¿Eliminar turno?
-                </h3>
-
-                <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                  Estás a punto de borrar el turno de{' '}
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    {deleteModalAppt.PACIENTE}
-                  </span>
-                  .
-                  {deleteModalAppt.RECURRENCIA && (
-                    <>
-                      <br />
-                      Este turno es parte de una serie recurrente.
-                    </>
-                  )}
-                </p>
-
-                <div className="w-full flex flex-col gap-2">
-                  <button
-                    onClick={() => confirmDelete(false)}
-                    className="w-full py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
-                  >
-                    Borrar solo este turno
-                  </button>
-
-                  {deleteModalAppt.RECURRENCIA && (
-                    <button
-                      onClick={() => confirmDelete(true)}
-                      className="w-full py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow-md hover:shadow-lg transition-all"
-                    >
-                      Borrar todos los turnos del paciente
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setDeleteModalAppt(null)}
-                    className="mt-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 underline"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  );
-};
-
-export default ListView;
