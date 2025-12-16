@@ -5,7 +5,7 @@ interface ListViewProps {
   selectedDate: string;
   onDateChange: (date: string) => void;
   filteredAppointments: Appointment[];
-  onEdit: (appt: Appointment, mode?: 'single' | 'series') => void; // <- importante
+  onEdit: (appt: Appointment, mode?: 'single' | 'series') => void; // ✅ ahora recibe mode
   onDelete: (id: string, deleteSeries: boolean, parentId?: string) => void;
 }
 
@@ -14,22 +14,15 @@ const ListView: React.FC<ListViewProps> = ({
   onDateChange,
   filteredAppointments,
   onEdit,
-  onDelete,
+  onDelete
 }) => {
   const [deleteModalAppt, setDeleteModalAppt] = useState<Appointment | null>(null);
-
-  // ✅ NUEVO: modal para Editar (solo este / serie)
-  const [editModalAppt, setEditModalAppt] = useState<Appointment | null>(null);
+  const [editModalAppt, setEditModalAppt] = useState<Appointment | null>(null); // ✅ NUEVO
 
   const formatDateTitle = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const handleTrashClick = (appt: Appointment) => {
@@ -43,8 +36,7 @@ const ListView: React.FC<ListViewProps> = ({
     }
   };
 
-  // ✅ CLAVE: esto es lo que hoy no te está pasando.
-  // En vez de editar directo, si es recurrente preguntamos.
+  // ✅ CLAVE: Editar ahora pregunta si es recurrente
   const handleEditClick = (appt: Appointment) => {
     if (appt.RECURRENCIA) {
       setEditModalAppt(appt);
@@ -55,14 +47,7 @@ const ListView: React.FC<ListViewProps> = ({
 
   const confirmEdit = (mode: 'single' | 'series') => {
     if (!editModalAppt) return;
-
-    // Si eligió "serie" pero no hay PARENT_ID, caemos a single (para no romper)
-    if (mode === 'series' && !editModalAppt.PARENT_ID) {
-      onEdit(editModalAppt, 'single');
-    } else {
-      onEdit(editModalAppt, mode);
-    }
-
+    onEdit(editModalAppt, mode);
     setEditModalAppt(null);
   };
 
@@ -76,8 +61,7 @@ const ListView: React.FC<ListViewProps> = ({
               {formatDateTitle(selectedDate)}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-0.5">
-              {filteredAppointments.length}{' '}
-              {filteredAppointments.length === 1 ? 'paciente' : 'pacientes'} agendados
+              {filteredAppointments.length} {filteredAppointments.length === 1 ? 'paciente' : 'pacientes'} agendados
             </p>
           </div>
 
@@ -95,41 +79,21 @@ const ListView: React.FC<ListViewProps> = ({
         {filteredAppointments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-dashed">
             <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-8 h-8 text-slate-400 dark:text-slate-500"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
-                />
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-slate-400 dark:text-slate-500">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
               </svg>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              No tienes pacientes para este día.
-            </p>
-            <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">
-              Disfruta de tu tiempo libre.
-            </p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">No tienes pacientes para este día.</p>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Disfruta de tu tiempo libre.</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:gap-4">
             {filteredAppointments.map((appt) => (
-              <div
-                key={appt.ID_TURNO}
-                className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all duration-200 overflow-hidden"
-              >
+              <div key={appt.ID_TURNO} className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all duration-200 overflow-hidden">
                 <div className="flex flex-row items-stretch">
                   {/* Time Column */}
                   <div className="bg-indigo-50/50 dark:bg-slate-700/50 w-16 sm:w-24 flex flex-col items-center justify-center p-2 border-r border-slate-100 dark:border-slate-700 shrink-0">
-                    <span className="text-indigo-600 dark:text-indigo-400 font-bold text-base sm:text-lg leading-none">
-                      {appt.HORA_INICIO}
-                    </span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold text-base sm:text-lg leading-none">{appt.HORA_INICIO}</span>
                   </div>
 
                   {/* Content */}
@@ -148,12 +112,12 @@ const ListView: React.FC<ListViewProps> = ({
                         <div className="mt-1.5 space-y-1">
                           {appt.TELEFONO && (
                             <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
-                              <span className="truncate">Tel: {appt.TELEFONO}</span>
+                              <span className="truncate">{appt.TELEFONO}</span>
                             </div>
                           )}
                           {appt.EMAIL && (
                             <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
-                              <span className="truncate">Email: {appt.EMAIL}</span>
+                              <span className="truncate">{appt.EMAIL}</span>
                             </div>
                           )}
                           {appt.NOTAS && (
@@ -171,19 +135,8 @@ const ListView: React.FC<ListViewProps> = ({
                           className="p-1.5 sm:p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
                           title="Editar"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="w-5 h-5"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                            />
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                           </svg>
                         </button>
 
@@ -192,19 +145,8 @@ const ListView: React.FC<ListViewProps> = ({
                           className="p-1.5 sm:p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                           title="Eliminar"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="w-5 h-5"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                            />
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                           </svg>
                         </button>
                       </div>
@@ -222,13 +164,16 @@ const ListView: React.FC<ListViewProps> = ({
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700">
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
-                  ✏️
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.688-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                  </svg>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
-                  ¿Editar turno?
-                </h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">¿Editar turno?</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                  Este turno es recurrente. ¿Querés editar solo este turno o este y todos los siguientes?
+                  Estás por editar un turno recurrente de{' '}
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{editModalAppt.PACIENTE}</span>.
+                  <br />
+                  ¿Querés editar solo este turno o este y todos los siguientes?
                 </p>
 
                 <div className="w-full flex flex-col gap-2">
@@ -264,15 +209,14 @@ const ListView: React.FC<ListViewProps> = ({
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-700">
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
-                  🗑️
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
+                  </svg>
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">¿Eliminar turno?</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
                   Estás a punto de borrar el turno de{' '}
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    {deleteModalAppt.PACIENTE}
-                  </span>
-                  .
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{deleteModalAppt.PACIENTE}</span>.
                   {deleteModalAppt.RECURRENCIA && (
                     <>
                       <br />
