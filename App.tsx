@@ -150,53 +150,65 @@ const App: React.FC = () => {
 
   // ✅ EXCEL: en realidad es CSV (Excel lo abre perfecto)
   const handleExportCSV = () => {
-    const data = scheduleService.getAppointments();
-    if (!data.length) {
-      alert("No hay turnos para exportar.");
-      return;
-    }
+  const data = scheduleService.getAppointments();
+  if (!data.length) {
+    alert("No hay turnos para exportar.");
+    return;
+  }
 
-    const headers = [
-      'PACIENTE',
-      'TELEFONO',
-      'EMAIL',
-      'FECHA_INICIO',
-      'HORA_INICIO',
-      'RECURRENCIA',
-      'FRECUENCIA',
-      'PARENT_ID',
-      'NOTAS'
-    ];
+  const headers = [
+    'Paciente',
+    'Teléfono',
+    'Email',
+    'Fecha',
+    'Hora',
+    'Recurrente',
+    'Frecuencia',
+    'Notas'
+  ];
 
-    const escape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-
-    const rows = data.map(a => [
-      escape(a.PACIENTE),
-      escape(a.TELEFONO),
-      escape(a.EMAIL),
-      escape(a.FECHA_INICIO),
-      escape(a.HORA_INICIO),
-      escape(a.RECURRENCIA),
-      escape(a.FRECUENCIA ?? ''),
-      escape(a.PARENT_ID ?? ''),
-      escape(a.NOTAS ?? ''),
-    ].join(','));
-
-    // BOM para que Excel abra bien UTF-8
-    const csv = "\uFEFF" + [headers.join(','), ...rows].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `PsiAgenda_Excel_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    URL.revokeObjectURL(url);
+  const formatDate = (iso: string) => {
+    // iso: YYYY-MM-DD -> DD/MM/YYYY
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
   };
+
+  const escape = (v: unknown) => {
+    const s = String(v ?? '');
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+
+  // ✅ separador ; (Excel ES lo toma bien como columnas)
+  const sep = ';';
+
+  const rows = data.map(a => [
+    escape(a.PACIENTE),
+    escape(a.TELEFONO),
+    escape(a.EMAIL),
+    escape(formatDate(a.FECHA_INICIO)),
+    escape(a.HORA_INICIO),
+    escape(a.RECURRENCIA ? 'Sí' : 'No'),
+    escape(a.FRECUENCIA ?? ''),
+    escape(a.NOTAS ?? ''),
+  ].join(sep));
+
+  // ✅ BOM para que Excel respete acentos/ñ
+  const csv = "\uFEFF" + [headers.join(sep), ...rows].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `PsiAgenda_Excel_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+};
+
 
   const handleRestoreClick = () => {
     fileInputRef.current?.click();
