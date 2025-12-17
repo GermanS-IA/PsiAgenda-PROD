@@ -342,17 +342,25 @@ const App: React.FC = () => {
         </div>
 
         {/* Views */}
-        {viewMode === ViewMode.CALENDAR ? (
-          <CalendarView appointments={appointments} selectedDate={selectedDate} onDateSelect={setSelectedDate} />
-        ) : (
-          <ListView
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            filteredAppointments={filteredAppointments}
-            onEdit={startEdit}
-            onDelete={handleDeleteAppointment}
-          />
-        )}
+    {viewMode === ViewMode.CALENDAR ? (
+  <CalendarView
+    appointments={appointments}
+    selectedDate={selectedDate}
+    onDateSelect={(date) => {
+      setSelectedDate(date);
+      setViewMode(ViewMode.LIST); // ✅ al elegir un día, abre Agenda Diaria
+    }}
+  />
+) : (
+  <ListView
+    selectedDate={selectedDate}
+    onDateChange={setSelectedDate}
+    filteredAppointments={filteredAppointments}
+    onEdit={startEdit}
+    onDelete={handleDeleteAppointment}
+  />
+)}
+
 
         {/* Floating Action Button */}
         <button
